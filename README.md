@@ -21,12 +21,37 @@ Use `python3` if your machine has no `python` command. No environment activation
 
 | Command | Result |
 |---|---|
-| `bootstrap.py` | Installs project-local uv, managed Python 3.12 and locked dependencies into `.venv`; checks computation |
+| `bootstrap.py` | Installs uv, Python 3.12 and locked dependencies on local disk; checks computation |
 | `self-test` | Proves pause/resume using a tiny random CPU model; no model download |
 | `train … --pause-after 10` | Downloads the official 4B base, trains to step 10, saves and exits |
 | `resume …/checkpoint-10` | Restores that experiment and finishes its original 20-step budget |
 
 The 16 training and 4 validation examples are synthetic plumbing tests. The resulting adapter is not a useful specialist. Bootstrap does not download model weights or start training.
+
+## Shared code, local storage
+
+Keep this repository on the shared drive if you use one. Run commands from this same checkout; the scripts automatically keep the heavy files on the current machine.
+
+| Location | Contents |
+|---|---|
+| This repository | Source code, README, JSON configs and dependency lock |
+| `~/.local/share/model-training-starter/` on Linux/WSL | Python, `.venv`, caches, datasets, checkpoints and exports |
+| `%LOCALAPPDATA%/model-training-starter/` on Windows | The same machine-local runtime files |
+
+```bash
+python lab.py paths
+```
+
+Config paths such as `data/specialist/train.jsonl` and CLI paths such as `runs/4b-smoke` are relative to that **local runtime directory**. Config filenames such as `configs/4b-smoke.json` remain relative to the source repository. The synthetic examples are copied locally during setup; existing copies are preserved.
+
+For a different local disk, set `MODEL_TRAINING_HOME` to an absolute directory and keep the same setting for every command. On Linux/WSL:
+
+```bash
+export MODEL_TRAINING_HOME="$HOME/ai-training-local"
+python bootstrap.py
+```
+
+Use a Linux filesystem on WSL local disk, rather than a NAS mount or `/mnt/c`. Existing environments and runs inside an older checkout are not moved or deleted automatically. Keep unfinished runs intact until their data and checkpoints have been deliberately transferred.
 
 ## Supported machines
 
@@ -46,7 +71,7 @@ python bootstrap.py --backend cpu
 python lab.py doctor
 ```
 
-Rerunning bootstrap checks the existing environment without updating it. Use a fresh checkout to change the backend or dependency lock while another run is unfinished. CPU mode is for code checks and the tiny self-test, not useful 4B/8B fine-tuning.
+Rerunning bootstrap checks the existing environment without updating it. Set `MODEL_TRAINING_HOME` to a new local directory to change the backend or dependency lock while another run is unfinished. CPU mode is for code checks and the tiny self-test, not useful 4B/8B fine-tuning.
 
 ## Pause and resume
 
@@ -85,7 +110,7 @@ Run sequentially. Each process releases its GPU allocations when it exits. Use h
 
 1. Complete the 4B test.
 2. Run `python lab.py train configs/8b-pilot.json` to test the larger model's memory use.
-3. Put reviewed examples in `data/specialist/train.jsonl` and `data/specialist/valid.jsonl`. Keep an untouched test set separately.
+3. Put reviewed examples in the local runtime’s `data/specialist/train.jsonl` and `data/specialist/valid.jsonl`. Keep an untouched test set separately.
 4. Edit `configs/8b-specialist.json`: set model, data paths, a new output folder, sequence length and total steps.
 5. Validate, then train:
 
@@ -118,12 +143,13 @@ If 8B runs out of memory, close other GPU workloads and try length 256 in a **ne
 | `bootstrap.py` | Standard-library entry point; verifies the uv download against PyPI's SHA-256 |
 | `lab.py` | Small command interface that uses the project environment |
 | `configs/` | Experiment settings |
+| `training_lab/paths.py` | Shared source and machine-local runtime paths |
 | `training_lab/train.py` | Tokenization, loss masking, QLoRA, checkpoints and resume |
 | `training_lab/artifacts.py` | Base/adapter generation and CPU merge |
 | `examples/` | Public synthetic fixtures; safe to publish |
 | `tests/` | Bootstrap, data and resume-policy checks |
 | `pyproject.toml`, `uv.lock` | Pinned direct dependencies and the resolved environment |
-| `data/`, `runs/`, `models/`, `exports/` | Your local work; ignored by Git |
+| `data/`, `runs/`, `models/`, `exports/` | Under the local runtime directory, outside the repository |
 
 A completed adapter can be merged with `python lab.py merge runs/8b-specialist-v1 exports/specialist-merged`. CPU FP32 raw weights alone require about 16 GB for 4B or 32 GB for 8B, plus working memory. The output is a Hugging Face checkpoint; GGUF conversion is a separate step.
 

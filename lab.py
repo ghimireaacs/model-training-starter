@@ -7,12 +7,16 @@ from pathlib import Path
 import subprocess
 import sys
 
+sys.dont_write_bytecode = True
+from training_lab.paths import runtime_root, prepare_runtime, runtime_environment
+
 ROOT = Path(__file__).resolve().parent
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
+    sub.add_parser('paths', help='Show shared source and machine-local storage paths')
     sub.add_parser('doctor', help='Check the installed environment and hardware')
     sub.add_parser('self-test', help='Test pause/resume on a tiny random CPU model, without model downloads')
     train = sub.add_parser('train', help='Start a new experiment from a JSON configuration')
@@ -32,7 +36,17 @@ def main():
     merge.add_argument('run')
     merge.add_argument('output')
     args = parser.parse_args()
-    os.chdir(ROOT)
+    runtime = runtime_root()
+    if args.command == 'paths':
+        print(f'Source: {ROOT}\nLocal runtime: {runtime}')
+        for name in ('.venv', 'data', 'runs', 'exports', 'cache'):
+            print(f'{name}: {runtime / name}')
+        return
+    if args.command == 'train':
+        args.config = str((ROOT / args.config).resolve())
+    prepare_runtime()
+    os.environ.update(runtime_environment(runtime))
+    os.chdir(runtime)
     if args.command == 'pause':
         run = Path(args.run)
         if not (run / 'run.json').is_file():
@@ -42,14 +56,14 @@ def main():
         (run / 'PAUSE').touch()
         print('Pause requested. Wait for PAUSED and process exit in the training terminal.')
         return
-    python = ROOT / '.venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    if Path(sys.prefix).resolve() != (ROOT / '.venv').resolve():
+    python = runtime / '.venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    if Path(sys.prefix).resolve() != (runtime / '.venv').resolve():
         if not python.is_file():
             parser.error('Run python bootstrap.py first')
-        raise SystemExit(subprocess.call([str(python), str(ROOT / 'lab.py'), *sys.argv[1:]], cwd=ROOT))
+        raise SystemExit(subprocess.call([str(python), str(ROOT / 'lab.py'), *sys.argv[1:]], cwd=runtime, env=runtime_environment(runtime)))
     if args.command == 'doctor':
         from training_lab.doctor import main as doctor
-        state = json.loads((ROOT / '.bootstrap' / 'ready.json').read_text())
+        state = json.loads((runtime / '.bootstrap' / 'ready.json').read_text())
         doctor(['--backend', state['backend']])
     elif args.command == 'self-test':
         from training_lab.selftest import main as selftest

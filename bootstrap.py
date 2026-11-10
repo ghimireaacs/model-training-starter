@@ -14,11 +14,15 @@ import sys
 import urllib.request
 import zipfile
 
+sys.dont_write_bytecode = True
+from training_lab.paths import prepare_runtime, runtime_root, runtime_environment, stage_examples
+
 ROOT = Path(__file__).resolve().parent
 UV_VERSION = '0.13.7'
 
 
-def python_path(root=ROOT):
+def python_path(root=None):
+    root = runtime_root() if root is None else root
     return root / '.venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
 
 
@@ -52,7 +56,7 @@ def gpu_info():
     result = subprocess.run([executable], capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError('nvidia-smi exists but cannot use the driver. Fix the host driver, or explicitly select --backend cpu for the self-test.')
-    match = re.search(r'CUDA Version:\s*(\d+)\.(\d+)', result.stdout)
+    match = re.search(r'\bCUDA(?:\s+UMD)?\s+Version\s*:\s*(\d+)\.(\d+)\b', result.stdout)
     if not match:
         raise RuntimeError('Cannot identify driver CUDA support from nvidia-smi. Check the host driver.')
     return tuple(map(int, match.groups()))
@@ -73,11 +77,12 @@ def choose_backend(requested):
     return 'cuda'
 
 
-def install_uv(target, root=ROOT):
+def install_uv(target, root=None):
+    root = runtime_root() if root is None else root
     destination = root / '.bootstrap' / UV_VERSION / ('uv.exe' if os.name == 'nt' else 'uv')
     if destination.is_file():
         return destination
-    print(f'Installing project-local uv {UV_VERSION} from PyPI...', flush=True)
+    print(f'Installing machine-local uv {UV_VERSION} from PyPI...', flush=True)
     with urllib.request.urlopen(f'https://pypi.org/pypi/uv/{UV_VERSION}/json', timeout=60) as response:
         metadata = json.load(response)
     artifact = next(item for item in metadata['urls'] if item['filename'].endswith(target))
@@ -105,27 +110,28 @@ def main(argv=None):
     if sys.version_info < (3, 10):
         raise RuntimeError('Launch bootstrap.py with Python 3.10 or newer. It installs the project Python 3.12 itself.')
     target = host_target()
-    state_path = ROOT / '.bootstrap' / 'ready.json'
+    runtime = prepare_runtime()
+    environment = runtime_environment(runtime)
+    print(f'Source: {ROOT}\nLocal runtime: {runtime}', flush=True)
+    state_path = runtime / '.bootstrap' / 'ready.json'
     existing = json.loads(state_path.read_text()) if state_path.exists() else None
     if existing:
         if args.backend != 'auto' and existing['backend'] != args.backend:
-            raise RuntimeError('This folder already uses another backend. Use a fresh checkout for a different backend; unfinished runs depend on the original environment.')
+            raise RuntimeError('This folder already uses another backend. Set MODEL_TRAINING_HOME to a new local directory for a different backend; unfinished runs depend on the original environment.')
         backend = existing['backend']
         if existing['fingerprint'] != fingerprint():
-            raise RuntimeError('Dependency files changed. Keep this environment for unfinished runs; bootstrap a fresh checkout for the new lockfile.')
+            raise RuntimeError('Dependency files changed. Keep this environment for unfinished runs; use a new local MODEL_TRAINING_HOME for the new lockfile.')
         if not python_path().is_file():
-            raise RuntimeError('The recorded environment is missing. Use a fresh checkout or restore the original .venv.')
+            raise RuntimeError('The recorded environment is missing. Restore the local .venv or choose a new MODEL_TRAINING_HOME.')
         print('Environment already prepared; checking it without changing packages.', flush=True)
     else:
         backend = choose_backend(args.backend)
         print(f'Preparing {backend.upper()} environment. No sudo, model download or training job.', flush=True)
         uv = install_uv(target)
-        environment = os.environ.copy()
-        environment.update(UV_PYTHON_INSTALL_DIR=str(ROOT / '.bootstrap' / 'python'),
-                           UV_PROJECT_ENVIRONMENT=str(ROOT / '.venv'), UV_PYTHON_PREFERENCE='only-managed')
         subprocess.run([str(uv), 'sync', '--frozen', '--extra', backend, '--python', '3.12'],
                        cwd=ROOT, env=environment, check=True)
-    subprocess.run([str(python_path()), '-m', 'training_lab.doctor', '--backend', backend], cwd=ROOT, check=True)
+    subprocess.run([str(python_path()), '-m', 'training_lab.doctor', '--backend', backend], cwd=runtime, env=environment, check=True)
+    stage_examples(runtime)
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps({'backend': backend, 'fingerprint': fingerprint(), 'uv': UV_VERSION}, indent=2) + '\n')
     print('\nREADY: ' + ('CUDA training environment' if backend == 'cuda' else 'CPU self-test environment; 4B/8B QLoRA needs a supported NVIDIA GPU'))
