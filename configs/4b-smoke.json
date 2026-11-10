@@ -1,0 +1,9 @@
+{
+  "model": "Qwen/Qwen3-4B",
+  "train": "examples/train.jsonl",
+  "valid": "examples/valid.jsonl",
+  "output": "runs/4b-smoke",
+  "length": 512,
+  "steps": 20,
+  "save_every": 5
+}

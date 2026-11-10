@@ -1,0 +1,9 @@
+{
+  "model": "Qwen/Qwen3-8B",
+  "train": "examples/train.jsonl",
+  "valid": "examples/valid.jsonl",
+  "output": "runs/8b-pilot",
+  "length": 512,
+  "steps": 10,
+  "save_every": 5
+}

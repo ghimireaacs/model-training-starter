@@ -1,0 +1,9 @@
+{
+  "model": "Qwen/Qwen3-8B",
+  "train": "data/specialist/train.jsonl",
+  "valid": "data/specialist/valid.jsonl",
+  "output": "runs/8b-specialist-v1",
+  "length": 512,
+  "steps": 125,
+  "save_every": 25
+}
