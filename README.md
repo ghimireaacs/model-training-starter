@@ -6,18 +6,27 @@ Direct **Transformers + PEFT + bitsandbytes**. No hosted training service or Uns
 
 ## Start here
 
-You need **Python 3.10+**, internet access and disk space. For 4B/8B training, install a working NVIDIA driver first. On Windows, Ubuntu WSL2 is the recommended route; the driver belongs on Windows.
+You need **Git, Python 3.10+**, internet access and disk space. For 4B/8B training, install a working NVIDIA driver first. On Windows, Ubuntu WSL2 is the recommended route; the driver belongs on Windows.
 
-From this folder:
+On a fresh machine:
 
 ```bash
-python bootstrap.py
-python lab.py self-test
-python lab.py train configs/4b-smoke.json --pause-after 10
-python lab.py resume runs/4b-smoke/checkpoint-10
+git clone https://github.com/ghimireaacs/model-training-starter.git
+cd model-training-starter
+python3 bootstrap.py
 ```
 
-Use `python3` if your machine has no `python` command. No environment activation is needed.
+Already using the shared source checkout? Open that folder and run only `python3 bootstrap.py`. No second clone or ZIP extraction is needed.
+
+Installation is complete when bootstrap prints `READY: CUDA training environment`. It installs the software on local disk and checks computation. Model downloads and training start only with the separate commands below:
+
+```bash
+python3 lab.py self-test
+python3 lab.py train configs/4b-smoke.json --pause-after 10
+python3 lab.py resume runs/4b-smoke/checkpoint-10
+```
+
+Commands below use `python3` for Linux/WSL. On native Windows, use `python`. No environment activation is needed.
 
 | Command | Result |
 |---|---|
@@ -39,7 +48,7 @@ Keep this repository on the shared drive if you use one. Run commands from this 
 | `%LOCALAPPDATA%/model-training-starter/` on Windows | The same machine-local runtime files |
 
 ```bash
-python lab.py paths
+python3 lab.py paths
 ```
 
 Config paths such as `data/specialist/train.jsonl` and CLI paths such as `runs/4b-smoke` are relative to that **local runtime directory**. Config filenames such as `configs/4b-smoke.json` remain relative to the source repository. The synthetic examples are copied locally during setup; existing copies are preserved.
@@ -48,10 +57,12 @@ For a different local disk, set `MODEL_TRAINING_HOME` to an absolute directory a
 
 ```bash
 export MODEL_TRAINING_HOME="$HOME/ai-training-local"
-python bootstrap.py
+python3 bootstrap.py
 ```
 
 Use a Linux filesystem on WSL local disk, rather than a NAS mount or `/mnt/c`. Existing environments and runs inside an older checkout are not moved or deleted automatically. Keep unfinished runs intact until their data and checkpoints have been deliberately transferred.
+
+Keep global uv and Hugging Face caches intact; other applications may use them. This starter has its own caches under the local runtime directory. Any cleanup should target only confirmed project files there.
 
 ## Supported machines
 
@@ -67,8 +78,8 @@ The CUDA environment uses **PyTorch 2.8 / CUDA 12.6**. The driver must report CU
 For a 3080 12 GB, start with 4B at 512 tokens. Treat 8B as a memory pilot. Allow roughly 40 GB free for the first exercise and more for both models and exports. File size alone does not establish VRAM fit.
 
 ```bash
-python bootstrap.py --backend cpu
-python lab.py doctor
+python3 bootstrap.py --backend cpu
+python3 lab.py doctor
 ```
 
 Rerunning bootstrap checks the existing environment without updating it. Set `MODEL_TRAINING_HOME` to a new local directory to change the backend or dependency lock while another run is unfinished. CPU mode is for code checks and the tiny self-test, not useful 4B/8B fine-tuning.
@@ -78,13 +89,13 @@ Rerunning bootstrap checks the existing environment without updating it. Set `MO
 In a second terminal, from this folder:
 
 ```bash
-python lab.py pause runs/4b-smoke
+python3 lab.py pause runs/4b-smoke
 ```
 
 Wait for **PAUSED** and the training terminal's prompt. Then you can sleep, reboot or use the GPU elsewhere. Resume the checkpoint named in that output:
 
 ```bash
-python lab.py resume runs/4b-smoke/checkpoint-10
+python3 lab.py resume runs/4b-smoke/checkpoint-10
 ```
 
 `checkpoint-10` is the exact path from the planned first example. An unscheduled pause may produce another step number. Use the path that actually exists.
@@ -100,8 +111,8 @@ The last two checkpoints are retained. Ctrl+C or a crash can lose work since the
 ## Compare the result
 
 ```bash
-python lab.py generate runs/4b-smoke "Summarize a backup failure caused by a full disk." --base-only
-python lab.py generate runs/4b-smoke "Summarize a backup failure caused by a full disk."
+python3 lab.py generate runs/4b-smoke "Summarize a backup failure caused by a full disk." --base-only
+python3 lab.py generate runs/4b-smoke "Summarize a backup failure caused by a full disk."
 ```
 
 Run sequentially. Each process releases its GPU allocations when it exits. Use held-out prompts to judge a real experiment.
@@ -109,15 +120,15 @@ Run sequentially. Each process releases its GPU allocations when it exits. Use h
 ## Train your own task
 
 1. Complete the 4B test.
-2. Run `python lab.py train configs/8b-pilot.json` to test the larger model's memory use.
+2. Run `python3 lab.py train configs/8b-pilot.json` to test the larger model's memory use.
 3. Put reviewed examples in the local runtime’s `data/specialist/train.jsonl` and `data/specialist/valid.jsonl`. Keep an untouched test set separately.
 4. Edit `configs/8b-specialist.json`: set model, data paths, a new output folder, sequence length and total steps.
 5. Validate, then train:
 
 ```bash
-python lab.py train configs/8b-specialist.json --check-data
-python lab.py train configs/8b-specialist.json --pause-after 10
-python lab.py resume runs/8b-specialist-v1/checkpoint-10
+python3 lab.py train configs/8b-specialist.json --check-data
+python3 lab.py train configs/8b-specialist.json --pause-after 10
+python3 lab.py resume runs/8b-specialist-v1/checkpoint-10
 ```
 
 Each JSONL line contains one conversation:
@@ -149,9 +160,9 @@ If 8B runs out of memory, close other GPU workloads and try length 256 in a **ne
 | `examples/` | Public synthetic fixtures; safe to publish |
 | `tests/` | Bootstrap, data and resume-policy checks |
 | `pyproject.toml`, `uv.lock` | Pinned direct dependencies and the resolved environment |
-| `data/`, `runs/`, `models/`, `exports/` | Under the local runtime directory, outside the repository |
+| `data/`, `runs/`, `cache/`, `exports/` | Under the local runtime directory, outside the repository; downloaded models live in `cache/huggingface/` |
 
-A completed adapter can be merged with `python lab.py merge runs/8b-specialist-v1 exports/specialist-merged`. CPU FP32 raw weights alone require about 16 GB for 4B or 32 GB for 8B, plus working memory. The output is a Hugging Face checkpoint; GGUF conversion is a separate step.
+A completed adapter can be merged with `python3 lab.py merge runs/8b-specialist-v1 exports/specialist-merged`. CPU FP32 raw weights alone require about 16 GB for 4B or 32 GB for 8B, plus working memory. The output is a Hugging Face checkpoint; GGUF conversion is a separate step.
 
 ## If something fails
 
@@ -167,9 +178,9 @@ A completed adapter can be merged with `python lab.py merge runs/8b-specialist-v
 ## Test and publish
 
 ```bash
-python -m unittest discover -s tests -v
-python lab.py self-test
-python tools/package.py
+python3 -m unittest discover -s tests -v
+python3 lab.py self-test
+python3 tools/package.py
 ```
 
 `dist/model-training-starter.zip` contains only the explicit source allowlist. Publish this folder as its own repository, not its parent workspace. No private datasets, credentials, weights, checkpoints or host addresses belong in the public repo. `.gitignore` is not a substitute for reviewing your staged files.
