@@ -11,3 +11,4 @@ Read README.md first. Keep the command path short: bootstrap, self-test, train, 
 - When changing dependencies, regenerate uv.lock and test a clean CPU bootstrap. Do not update an environment holding unfinished runs.
 - Run the unit tests and python lab.py self-test after changing training or bootstrap logic. CUDA changes still need a real GPU check; report that separately.
 - Update README.md and configs when commands change. Keep setup prose concise.
+- Keep setup, tests and training as manually invoked local commands. Do not add GitHub Actions workflows to this project.

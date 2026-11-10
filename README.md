@@ -148,7 +148,7 @@ python tools/package.py
 
 `dist/model-training-starter.zip` contains only the explicit source allowlist. Publish this folder as its own repository, not its parent workspace. No private datasets, credentials, weights, checkpoints or host addresses belong in the public repo. `.gitignore` is not a substitute for reviewing your staged files.
 
-The CPU self-test exercises the real Trainer and PEFT checkpoint workflow with tiny random weights. It does not establish CUDA performance or that a particular 8B configuration fits. The included GitHub Actions workflow runs CPU checks on Linux and Windows when you publish it; those hosted jobs have not run merely because the file exists.
+The CPU self-test exercises the real Trainer and PEFT checkpoint workflow with tiny random weights. It does not establish CUDA performance or that a particular 8B configuration fits. Run setup, tests and training manually on your own machine. This repository has no GitHub Actions workflow.
 
 ## License and references
 

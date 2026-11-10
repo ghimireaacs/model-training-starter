@@ -5,7 +5,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ['README.md', 'LICENSE', 'AGENTS.md', '.gitignore', '.python-version',
          'pyproject.toml', 'uv.lock', 'bootstrap.py', 'lab.py']
-TREES = {'.github/workflows': {'.yml', '.yaml'}, 'configs': {'.json'},
+TREES = {'configs': {'.json'},
          'examples': {'.jsonl'}, 'training_lab': {'.py'}, 'tests': {'.py'}, 'tools': {'.py'}}
 
 
