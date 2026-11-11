@@ -59,7 +59,7 @@ def main():
     python = runtime / '.venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
     if Path(sys.prefix).resolve() != (runtime / '.venv').resolve():
         if not python.is_file():
-            parser.error('Run python bootstrap.py first')
+            parser.error(f"Run {'python' if os.name == 'nt' else 'python3'} bootstrap.py first")
         raise SystemExit(subprocess.call([str(python), str(ROOT / 'lab.py'), *sys.argv[1:]], cwd=runtime, env=runtime_environment(runtime)))
     if args.command == 'doctor':
         from training_lab.doctor import main as doctor

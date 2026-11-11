@@ -19,6 +19,7 @@ from training_lab.paths import prepare_runtime, runtime_root, runtime_environmen
 
 ROOT = Path(__file__).resolve().parent
 UV_VERSION = '0.13.7'
+PYTHON = 'python' if os.name == 'nt' else 'python3'  # the command name used in printed hints
 
 
 def python_path(root=None):
@@ -135,9 +136,9 @@ def main(argv=None):
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps({'backend': backend, 'fingerprint': fingerprint(), 'uv': UV_VERSION}, indent=2) + '\n')
     print('\nREADY: ' + ('CUDA training environment' if backend == 'cuda' else 'CPU self-test environment; 4B/8B QLoRA needs a supported NVIDIA GPU'))
-    print('Next: python lab.py self-test')
+    print(f'Next: {PYTHON} lab.py self-test')
     if backend == 'cuda':
-        print('Then: python lab.py train configs/4b-smoke.json --pause-after 10')
+        print(f'Then: {PYTHON} lab.py train configs/4b-smoke.json --pause-after 10')
 
 
 if __name__ == '__main__':

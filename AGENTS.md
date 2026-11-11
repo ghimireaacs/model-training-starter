@@ -11,7 +11,7 @@ This repository is the source of truth. Make changes in this checkout; generated
 - Never put credentials, personal data, private hostnames/addresses or machine paths into public examples.
 - Keep data/, runs/, models/, exports/, .venv/ and .bootstrap/ excluded from source packages and Git.
 - When changing dependencies, regenerate uv.lock and test a clean CPU bootstrap. Do not update an environment holding unfinished runs.
-- Run the unit tests and python lab.py self-test after changing training or bootstrap logic. CUDA changes still need a real GPU check; report that separately.
+- Run the unit tests and python3 lab.py self-test after changing training or bootstrap logic. CUDA changes still need a real GPU check; report that separately.
 - Update README.md and configs when commands change. Keep setup prose concise.
 - Keep setup, tests and training as manually invoked local commands. Do not add GitHub Actions workflows to this project.
 

@@ -175,17 +175,20 @@ A completed adapter can be merged with `python3 lab.py merge runs/8b-specialist-
 | Model download interrupted | Rerun the same fresh-run command if no run manifest was written |
 | Wrong or weak answers | Compare the base and adapter on unseen prompts; improve data before adding steps |
 
-## Test and publish
+## Check your changes
+
+After editing the code, run both checks. Neither needs a GPU or a model download.
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 lab.py self-test
-python3 tools/package.py
 ```
 
-`dist/model-training-starter.zip` contains only the explicit source allowlist. Publish this folder as its own repository, not its parent workspace. No private datasets, credentials, weights, checkpoints or host addresses belong in the public repo. `.gitignore` is not a substitute for reviewing your staged files.
+The unit tests cover bootstrap decisions, data masking and the resume rules. The self-test runs the real Trainer and PEFT checkpoint workflow on a tiny random model: train, pause, resume, compare with an uninterrupted run, merge. It proves the logic, not CUDA performance or whether a particular 8B configuration fits your card.
 
-The CPU self-test exercises the real Trainer and PEFT checkpoint workflow with tiny random weights. It does not establish CUDA performance or that a particular 8B configuration fits. Run setup, tests and training manually on your own machine. This repository has no GitHub Actions workflow.
+Editing `training_lab/train.py` changes its hash, and resume checks that hash. Finish or abandon unfinished runs before you change it.
+
+`python3 tools/package.py` writes a source-only ZIP to `dist/` from an explicit file list, for copying the starter to a machine without Git.
 
 ## License and references
 
